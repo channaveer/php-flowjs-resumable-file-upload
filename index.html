@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>StackCoder - Resumable Upload Demo</title>
+	<!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+		integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+</head>
+
+<body>
+	<div class="container">
+		<div class="row">
+			<div class="col-sm-6 col-sm-offset-3 text-center">
+				<h3 class="text-primary">Resumable File Uploads With<br/>PHP & FlowJs</h1>
+					<br><br>
+					<p>
+						<!-- Upload button -->
+						<button type="button" id="upbrowse" class="btn btn-primary"><span class="glyphicon glyphicon-upload"></span> Browse Files</button>
+						<button type="button" id="upToggle" class="btn btn-default"><span class="glyphicon glyphicon-play"></span> Pause OR Continue</button>
+					
+						<!-- Upload file listing -->
+						<div id="uplist"></div>
+					</p>
+			</div>
+		</div>
+	</div>
+
+	<!-- Check https://cdnjs.com/libraries/flow.js for latest version -->
+	<!-- GitHub Link https://github.com/flowjs/flow.js/ -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/flow.js/2.14.1/flow.min.js"></script>
+	<script>
+		window.addEventListener("load", function () {
+			/* Setup new flow object and server php file here */
+			var flow = new Flow({
+				target: 'resumable.php',
+				chunkSize: 1024 * 1024, /** Whole file is broken in chunks of 1MB */
+				singleFile: true
+			});
+
+			if (flow.support) {
+				/* Browse button */
+				flow.assignBrowse(document.getElementById('upbrowse'));
+				/* Incase if you want to support Drop zone box then uncomment the following */
+				// flow.assignDrop(document.getElementById('updrop'));
+
+				/* Action to perform when the file is added */
+				flow.on('fileAdded', function (file, event) {
+					let fileslot = document.createElement("div");
+					fileslot.id = file.uniqueIdentifier;
+					fileslot.innerHTML = `${file.name} (${file.size}) - <strong>0%</strong>`;
+					document.getElementById("uplist").appendChild(fileslot);
+				});
+
+				/** Any action soon as the file is submitted */
+				flow.on('filesSubmitted', function (array, event) {
+					// console.log(array, event);
+					flow.upload();
+				});
+
+				/** Action to perform while the file is being uploaded ie in progress state */
+				flow.on('fileProgress', function (file, chunk) {
+					// console.log(file, chunk);
+					let progress = (chunk.offset + 1) / file.chunks.length * 100;
+					progress = progress.toFixed(2) + "%";
+
+					let fileslot = document.getElementById(file.uniqueIdentifier);
+					fileslot = fileslot.getElementsByTagName("strong")[0];
+					fileslot.innerHTML = progress;
+				});
+
+				/** When the uploading on the file is completed */
+				flow.on('fileSuccess', function (file, message, chunk) {
+					// console.log(file, message, chunk);
+					let fileslot = document.getElementById(file.uniqueIdentifier);
+					fileslot = fileslot.getElementsByTagName("strong")[0];
+					fileslot.innerHTML = "DONE";
+				});
+
+				/** Action to perform when an error occurs during file upload */
+				flow.on('fileError', function (file, message) {
+					console.log(file, message);
+					let fileslot = document.getElementById(file.uniqueIdentifier);
+					fileslot = fileslot.getElementsByTagName("strong")[0];
+					fileslot.innerHTML = "ERROR";
+				});
+
+				/** Pause or Unpause the upload process */
+				document.getElementById("upToggle").addEventListener("click", function () {
+					if (flow.isUploading()) { flow.pause(); }
+					else { flow.resume(); }
+				});
+			}
+		});
+	</script>
+</body>
+
+</html>
